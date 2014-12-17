@@ -10,21 +10,12 @@
                 cursor: crosshair;
             }
             .box{
+                will-change:backgroundColor;
                 float:left;
                 width:10px;
                 height:10px;
-                background: #cccccc;
+                background-color: #cccccc;
                 margin:1px;
-            }
-            .pending{
-                background: red;
-                cursor: wait;
-            }
-            .complete{
-                background: blue;
-            }
-            .focus{
-                box-shadow: 0 0 1px;
             }
         </style>
         <script type="text/javascript" src="algrithim/findAdjacent.js"></script>
@@ -33,33 +24,30 @@
             var processedSet = new WeakSet();
             var promises = [];
 
-            function immediatelyUpdateNode(node) {
+            function processNode(node) {
                 if (!processedSet.has(node)) {
                     processedSet.add(node);
-                    node.classList.add("pending");
+                    node.style.backgroundColor = "red";
                     var number = +node.id.replace("_", "");
-                    queueMd5Service(number).then(function (md5String) {
-                        node.classList.remove("pending");
-                        node.classList.add("complete");
-                        node.title = md5String;
-                    });
+                    queueMd5Service(number).then(getSuccessNodeRender(node));
+                }
+            }
+
+            function getSuccessNodeRender(node) {
+                return function (md5String) {
+                    node.style.backgroundColor = "blue";
+                    node.title = md5String;
                 }
             }
 
             function getAdjacentNode(node) {
-                var focus = findAdjacent(parseInt(node.id.replace("_", ""), 10), 4, boxHorizonalCount);
+                var focus = findAdjacent(parseInt(node.id.replace("_", ""), 10), 10, boxHorizonalCount);
                 return document.querySelectorAll("#_" + focus.join(",#_"));
             }
 
             function bindListener() {
-                document.body.addEventListener("mousemove", function (e) {
-                    immediatelyUpdateNode(e.target);
-                }, false);
-
                 document.body.addEventListener("mouseover", function (e) {
-                    removeClass(document.querySelectorAll(".focus"), "focus");
                     var focus_nodes = getAdjacentNode(e.target);
-                    addClass(focus_nodes, "focus");
                     loadFocus(focus_nodes);
                 }, false);
 
@@ -69,38 +57,8 @@
             function loadFocus(items) {
                 for (var i = 0; i < items.length; i++) {
                     var target = items[i];
-                    immediatelyUpdateNode(target);
+                    processNode(target);
                 }
-            }
-
-            function addClass(items, className) {
-                for (var i = 0; i < items.length; i++) {
-                    items[i].classList.add(className);
-                }
-            }
-
-            function removeClass(items, className) {
-                for (var i = 0; i < items.length; i++) {
-                    items[i].classList.remove(className);
-                }
-            }
-
-            function md5Service(number) {
-                var xhrPromise = new Promise(function (resolve, reject) {
-                    var xhr = new XMLHttpRequest();
-                    xhr.onreadystatechange = function () {
-                        if (xhr.readyState === 4) {
-                            if (xhr.status === 200) {
-                                resolve(xhr.responseText);
-                            } else {
-                                reject(xhr.status);
-                            }
-                        }
-                    };
-                    xhr.open("GET", "md5.php?text=" + number);
-                    xhr.send();
-                });
-                return xhrPromise;
             }
 
             function queueMd5Service(number) {
@@ -132,7 +90,7 @@
                 xhr.send();
             }
 
-            window.setInterval(function () {
+            function resolveQueue() {
                 var l = promises.length;
                 if (l === 0) {
                     return;
@@ -147,12 +105,13 @@
                 promises.length = 0;
 
                 batchMd5Service(callObject);
+            }
 
-            }, 100)
+            window.setInterval(resolveQueue, 100);
         </script>
     </head>
     <body onload="initStage(1E4);
-                    bindListener();
-                    calculateStageWidth();">
+            bindListener();
+            calculateStageWidth();">
     </body>
 </html>
