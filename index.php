@@ -31,13 +31,14 @@
         <script type="text/javascript" src="app/Stage.js"></script>
         <script type="text/javascript">
             var processedSet = new WeakSet();
+            var promises = [];
 
             function immediatelyUpdateNode(node) {
                 if (!processedSet.has(node)) {
                     processedSet.add(node);
                     node.classList.add("pending");
                     var number = +node.id.replace("_", "");
-                    md5Service(number).then(function (md5String) {
+                    queueMd5Service(number).then(function (md5String) {
                         node.classList.remove("pending");
                         node.classList.add("complete");
                         node.title = md5String;
@@ -46,7 +47,7 @@
             }
 
             function getAdjacentNode(node) {
-                var focus = findAdjacent(parseInt(node.id.replace("_", ""), 10), 3, boxHorizonalCount);
+                var focus = findAdjacent(parseInt(node.id.replace("_", ""), 10), 4, boxHorizonalCount);
                 return document.querySelectorAll("#_" + focus.join(",#_"));
             }
 
@@ -102,10 +103,56 @@
                 return xhrPromise;
             }
 
+            function queueMd5Service(number) {
+                var p = new Promise(function (resolve) {
+                    promises.push({
+                        number: number,
+                        resolve: resolve
+                    });
+                });
+                return p;
+            }
+
+            function batchMd5Service(callObject) {
+                var xhr = new XMLHttpRequest();
+                xhr.onreadystatechange = function () {
+                    if (xhr.readyState === 4) {
+                        if (xhr.status === 200) {
+                            var data = JSON.parse(xhr.responseText);
+                            for (var i = 0; i < data.length; i++) {
+                                var item = data[i];
+                                if (callObject[item["number"]]) {
+                                    callObject[item["number"]].resolve(item["md5"]);
+                                }
+                            }
+                        }
+                    }
+                };
+                xhr.open("GET", "md5_batch.php?text=" + Object.keys(callObject).join(","));
+                xhr.send();
+            }
+
+            window.setInterval(function () {
+                var l = promises.length;
+                if (l === 0) {
+                    return;
+                }
+
+                var callObject = {};
+                for (var i = 0; i < l; i++) {
+                    var item = promises[i];
+                    callObject[item.number] = item;
+                }
+
+                promises.length = 0;
+
+                batchMd5Service(callObject);
+
+            }, 100)
         </script>
     </head>
     <body onload="initStage(1E4);
-            bindListener();
-            calculateStageWidth();">
+                    bindListener();
+                    calculateStageWidth();">
     </body>
 </html>
