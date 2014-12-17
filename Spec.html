@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>TODO supply a title</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script type="text/javascript" src="lib/jasmine-2.1.3/jasmine.js"></script>
+        <script type="text/javascript" src="lib/jasmine-2.1.3/jasmine-html.js"></script>
+        <script type="text/javascript" src="lib/jasmine-2.1.3/boot.js"></script>
+        <link rel="stylesheet" href="lib/jasmine-2.1.3/jasmine.css"/>
+        <script type="text/javascript" src="algrithim/findAdjacent.js"></script>
+
+        <script type="text/javascript">
+            describe("findAdjacent", function () {
+                it("normal", function () {
+                    expect(findAdjacent(70, 1, 15).join(",")).toBe("54,55,56,69,70,71,84,85,86");
+                });
+                it("boundary left", function () {
+                    expect(findAdjacent(11, 1, 10).join(",")).toBe("1,2,11,12,21,22");
+                });
+                it("boundary right", function () {
+                    expect(findAdjacent(20, 1, 10).join(",")).toBe("9,10,19,20,29,30");
+                });
+            })
+        </script>
+    </head>
+    <body>
+
+    </body>
+</html>
