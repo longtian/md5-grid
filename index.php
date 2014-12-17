@@ -24,7 +24,7 @@
                 background: blue;
             }
             .focus{
-                box-shadow: 0 0 10px;
+                box-shadow: 0 0 1px;
             }
         </style>
         <script type="text/javascript" src="algrithim/findAdjacent.js"></script>
@@ -32,39 +32,43 @@
         <script type="text/javascript">
             var processedSet = new WeakSet();
 
+            function immediatelyUpdateNode(node) {
+                if (!processedSet.has(node)) {
+                    processedSet.add(node);
+                    node.classList.add("pending");
+                    var number = +node.id.replace("_", "");
+                    md5Service(number).then(function (md5String) {
+                        node.classList.remove("pending");
+                        node.classList.add("complete");
+                        node.title = md5String;
+                    });
+                }
+            }
+
+            function getAdjacentNode(node) {
+                var focus = findAdjacent(parseInt(node.id.replace("_", ""), 10), 3, boxHorizonalCount);
+                return document.querySelectorAll("#_" + focus.join(",#_"));
+            }
+
             function bindListener() {
                 document.body.addEventListener("mousemove", function (e) {
-                    var target = e.target;
-                    if (target.id && !processedSet.has(target)) {
-                        processedSet.add(target);
-                        target.classList.add("pending");
-                        getMd5(target);
-                    }
+                    immediatelyUpdateNode(e.target);
                 }, false);
 
                 document.body.addEventListener("mouseover", function (e) {
-                    var target = e.target;
-                    var focus = findAdjacent(parseInt(target.id.replace("_", ""), 10), 3, boxHorizonalCount);
-                    removeClass(document.querySelectorAll(".focus"), "focus")
-
-                    var focus_nodes = document.querySelectorAll("#_" + focus.join(",#_"));
+                    removeClass(document.querySelectorAll(".focus"), "focus");
+                    var focus_nodes = getAdjacentNode(e.target);
                     addClass(focus_nodes, "focus");
                     loadFocus(focus_nodes);
-
                 }, false);
 
-                calculateStageWidth();
                 window.addEventListener("resize", calculateStageWidth);
             }
-            
+
             function loadFocus(items) {
                 for (var i = 0; i < items.length; i++) {
                     var target = items[i];
-                    if (target.id && !processedSet.has(target)) {
-                        processedSet.add(target);
-                        target.classList.add("pending");
-                        getMd5(target);
-                    }
+                    immediatelyUpdateNode(target);
                 }
             }
 
@@ -80,22 +84,28 @@
                 }
             }
 
-            function getMd5(target) {
-                var xhr = new XMLHttpRequest();
-                xhr.onreadystatechange = function () {
-                    if (xhr.readyState === 4 && xhr.status === 200) {
-                        target.classList.remove("pending");
-                        target.classList.add("complete");
-                        target.title = xhr.responseText;
-                    }
-                };
-                xhr.open("GET", "md5.php?text=" + parseInt(target.id.replace("_", ""), 10));
-                xhr.send();
+            function md5Service(number) {
+                var xhrPromise = new Promise(function (resolve, reject) {
+                    var xhr = new XMLHttpRequest();
+                    xhr.onreadystatechange = function () {
+                        if (xhr.readyState === 4) {
+                            if (xhr.status === 200) {
+                                resolve(xhr.responseText);
+                            } else {
+                                reject(xhr.status);
+                            }
+                        }
+                    };
+                    xhr.open("GET", "md5.php?text=" + number);
+                    xhr.send();
+                });
+                return xhrPromise;
             }
 
         </script>
     </head>
     <body onload="initStage(1E4);
-            bindListener();">
+            bindListener();
+            calculateStageWidth();">
     </body>
 </html>
